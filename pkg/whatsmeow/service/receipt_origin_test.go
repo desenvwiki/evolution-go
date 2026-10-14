@@ -22,6 +22,8 @@ func TestRemoteRecipientReceipt(t *testing.T) {
         {"own linked-device echo", types.MessageSource{Chat:remote,Sender:own,IsFromMe:true},false},
         {"own echo with chat recipient", types.MessageSource{Chat:remote,Sender:own,IsFromMe:true},false},
         {"mismatched recipient", types.MessageSource{Chat:remote,Sender:own},false},
+        {"outbound authored but sender is own device", types.MessageSource{Chat:remote,Sender:own,IsFromMe:true},false},
+        {"recipient delivery with sender device suffix", types.MessageSource{Chat:remote,Sender:types.JID{User:remote.User,Server:remote.Server,Device:2},IsFromMe:true},true},
         {"remote group member", types.MessageSource{Chat:group,Sender:remote,IsGroup:true},true},
         {"own group device", types.MessageSource{Chat:group,Sender:own,IsGroup:true,IsFromMe:true},false},
         {"missing source",types.MessageSource{},false},
