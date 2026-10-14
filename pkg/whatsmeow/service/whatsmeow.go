@@ -1765,7 +1765,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 			if evt.Type == types.ReceiptTypeRead {
 				postMap["state"] = "Read"
 				for _, v := range evt.MessageIDs {
-					messageKey := fmt.Sprintf("%s_%s_%s_%s", mycli.userID, v, "Read", evt.Sender.ToNonAD().String())
+					messageKey := receiptDedupKey(mycli.userID, v, "Read", evt.Sender)
 					if _, found := mycli.processedMessages.Get(messageKey); found {
 						mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Message duplicated ignored: %s", mycli.userID, v)
 						continue
@@ -1794,7 +1794,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 			// differs). Persist all IDs; distinguish remote sender in the cache
 			// so an unrelated device ACK cannot suppress a recipient ACK.
 			for _, messageID := range evt.MessageIDs {
-				messageKey := fmt.Sprintf("%s_%s_%s_%s", mycli.userID, messageID, "Delivered", evt.Sender.ToNonAD().String())
+				messageKey := receiptDedupKey(mycli.userID, messageID, "Delivered", evt.Sender)
 				if _, found := mycli.processedMessages.Get(messageKey); found {
 					continue
 				}
