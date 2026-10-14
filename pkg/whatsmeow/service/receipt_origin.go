@@ -1,6 +1,7 @@
 package whatsmeow_service
 
 import (
+    "fmt"
     "go.mau.fi/whatsmeow/types"
     "go.mau.fi/whatsmeow/types/events"
 )
@@ -16,4 +17,10 @@ func isRemoteRecipientReceipt(receipt *events.Receipt) bool {
         return receipt.Chat.Server == types.GroupServer
     }
     return receipt.Chat.ToNonAD() == receipt.Sender.ToNonAD()
+}
+
+// The source belongs in the deduplication identity: a local-device echo
+// must never consume the key used by the remote recipient's ACK.
+func receiptDedupKey(instanceID, messageID, status string, sender types.JID) string {
+    return fmt.Sprintf("%s_%s_%s_%s", instanceID, messageID, status, sender.ToNonAD().String())
 }
