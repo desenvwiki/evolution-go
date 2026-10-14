@@ -32,3 +32,14 @@ func TestRemoteRecipientReceipt(t *testing.T) {
         })
     }
 }
+
+func TestReceiptDedupKeySeparatesRemoteFromOwnDevice(t *testing.T) {
+    remote := types.NewJID("5511999999999", types.DefaultUserServer)
+    own := types.NewJID("5511888888888", types.DefaultUserServer)
+    keyRemote := receiptDedupKey("instance", "message", "Delivered", remote)
+    keyOwn := receiptDedupKey("instance", "message", "Delivered", own)
+    if keyRemote == keyOwn {t.Fatal("own-device ACK suppressed genuine remote ACK")}
+    if keyRemote != receiptDedupKey("instance", "message", "Delivered", remote) {t.Fatal("remote receipt is not idempotent")}
+    if keyRemote == receiptDedupKey("instance", "other-message", "Delivered", remote) {t.Fatal("different messages collide")}
+    if keyRemote == receiptDedupKey("other-instance", "message", "Delivered", remote) {t.Fatal("tenant/instance isolation lost")}
+}
