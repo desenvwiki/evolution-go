@@ -18,6 +18,7 @@ func TestRemoteRecipientReceipt(t *testing.T) {
         want bool
     }{
         {"remote recipient delivery", types.MessageSource{Chat:remote,Sender:remote},true},
+        {"outbound message delivered to recipient", types.MessageSource{Chat:remote,Sender:remote,IsFromMe:true},true},
         {"own linked-device echo", types.MessageSource{Chat:remote,Sender:own,IsFromMe:true},false},
         {"own echo with chat recipient", types.MessageSource{Chat:remote,Sender:own,IsFromMe:true},false},
         {"mismatched recipient", types.MessageSource{Chat:remote,Sender:own},false},
