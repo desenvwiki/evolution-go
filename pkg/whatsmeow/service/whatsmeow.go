@@ -1730,6 +1730,21 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 
 		mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] ===== MESSAGE PROCESSING COMPLETED ===== ID: %s, From: %s, Type: %s, Webhook: %v", mycli.userID, evt.Info.ID, evt.Info.Chat.String(), evt.Info.Type, doWebhook)
 	case *events.Receipt:
+		if len(evt.MessageIDs) == 0 {
+			mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Receipt without message IDs ignored", mycli.userID)
+			return
+		}
+		// Evolution Go must not promote an ACK from our own linked devices.
+		// Whatsmeow's MessageSource distinguishes the receipt sender from the
+		// author of the original message. Ignoring this source previously
+		// produced false Delivered states and occupied the de-duplication key
+		// before the recipient's genuine ACK arrived.
+		if (evt.Type == types.ReceiptTypeDelivered || evt.Type == types.ReceiptTypeRead) &&
+			!isRemoteRecipientReceipt(evt) {
+			mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo(
+				"[%s] Own-device or unverified receipt ignored (type=%s)", mycli.userID, evt.Type)
+			return
+		}
 		doWebhook = true
 		postMap["event"] = "Receipt"
 
@@ -1750,7 +1765,7 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 			if evt.Type == types.ReceiptTypeRead {
 				postMap["state"] = "Read"
 				for _, v := range evt.MessageIDs {
-					messageKey := fmt.Sprintf("%s_%s_%s", mycli.userID, v, "Read")
+					messageKey := receiptDedupKey(mycli.userID, v, "Read", evt.Sender)
 					if _, found := mycli.processedMessages.Get(messageKey); found {
 						mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Message duplicated ignored: %s", mycli.userID, v)
 						continue
@@ -1775,26 +1790,27 @@ func (mycli *MyClient) myEventHandler(rawEvt interface{}) {
 		} else if evt.Type == types.ReceiptTypeDelivered {
 			postMap["state"] = "Delivered"
 
-			var message message_model.Message
+			// A receipt can contain multiple message IDs (Android / iOS order
+			// differs). Persist all IDs; distinguish remote sender in the cache
+			// so an unrelated device ACK cannot suppress a recipient ACK.
+			for _, messageID := range evt.MessageIDs {
+				messageKey := receiptDedupKey(mycli.userID, messageID, "Delivered", evt.Sender)
+				if _, found := mycli.processedMessages.Get(messageKey); found {
+					continue
+				}
+				mycli.processedMessages.Set(messageKey, true, 30*time.Minute)
 
-			message.MessageID = evt.MessageIDs[0]
-			message.Timestamp = evt.Timestamp.Format("2006-01-02 15:04:05")
-			message.Status = "Delivered"
-			message.Source = evt.Chat.ToNonAD().User
-
-			messageKey := fmt.Sprintf("%s_%s_%s", mycli.userID, evt.MessageIDs[0], "Delivered")
-			if _, found := mycli.processedMessages.Get(messageKey); found {
-				mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Message duplicated ignored: %s", mycli.userID, evt.MessageIDs[0])
-				return
+				message := message_model.Message{
+					MessageID: messageID,
+					Timestamp: evt.Timestamp.Format("2006-01-02 15:04:05"),
+					Status:    "Delivered",
+					Source:    evt.Chat.ToNonAD().User,
+				}
+				if mycli.config.DatabaseSaveMessages {
+					mycli.persistMessageAsync(message)
+				}
 			}
-
-			mycli.processedMessages.Set(messageKey, true, 30*time.Minute)
-
-			if mycli.config.DatabaseSaveMessages {
-				mycli.persistMessageAsync(message)
-			}
-
-			mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Message delivered to %s", mycli.userID, evt.SourceString())
+			mycli.loggerWrapper.GetLogger(mycli.userID).LogInfo("[%s] Recipient delivery confirmed (count=%d)", mycli.userID, len(evt.MessageIDs))
 		} else {
 			return
 		}
