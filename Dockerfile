@@ -9,6 +9,8 @@ COPY go.mod go.sum ./
 
 # whatsmeow agora vem do proxy oficial (go.mau.fi/whatsmeow, sem replace local) —
 # não há mais submódulo whatsmeow-lib para copiar.
+COPY whatsmeow-extension ./whatsmeow-extension
+RUN git clone --quiet https://github.com/tulir/whatsmeow.git ./whatsmeow-lib && git -C ./whatsmeow-lib checkout b572e5bcb92b && cp ./whatsmeow-extension/newsletter_edit.go ./whatsmeow-extension/newsletter_edit_test.go ./whatsmeow-lib/
 RUN go mod download
 
 # Copiar o restante do código

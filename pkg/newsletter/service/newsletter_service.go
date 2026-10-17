@@ -14,6 +14,7 @@ import (
 
 type NewsletterService interface {
 	CreateNewsletter(data *CreateNewsletterStruct, instance *instance_model.Instance) (*types.NewsletterMetadata, error)
+	UpdateNewsletter(data *UpdateNewsletterStruct, instance *instance_model.Instance) (*types.NewsletterMetadata, error)
 	ListNewsletter(instance *instance_model.Instance) ([]*types.NewsletterMetadata, error)
 	GetNewsletter(data *GetNewsletterStruct, instance *instance_model.Instance) (*types.NewsletterMetadata, error)
 	GetNewsletterInvite(data *GetNewsletterInviteStruct, instance *instance_model.Instance) (*types.NewsletterMetadata, error)

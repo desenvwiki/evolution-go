@@ -228,6 +228,7 @@ func (r *Routes) AssignRoutes(eng *gin.Engine) {
 		routes.Use(r.authMiddleware.Auth)
 		{
 			routes.POST("/create", r.newsletterHandler.CreateNewsletter)
+			routes.POST("/update", r.newsletterHandler.UpdateNewsletter)
 			routes.GET("/list", r.newsletterHandler.ListNewsletter)
 			routes.POST("/info", r.jidValidationMiddleware.ValidateJIDFields("newsletterId"), r.newsletterHandler.GetNewsletter)
 			routes.POST("/link", r.jidValidationMiddleware.ValidateJIDFields("newsletterId"), r.newsletterHandler.GetNewsletterInvite)

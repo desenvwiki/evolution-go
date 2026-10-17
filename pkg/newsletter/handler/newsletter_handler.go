@@ -10,6 +10,7 @@ import (
 
 type NewsletterHandler interface {
 	CreateNewsletter(ctx *gin.Context)
+	UpdateNewsletter(ctx *gin.Context)
 	ListNewsletter(ctx *gin.Context)
 	GetNewsletter(ctx *gin.Context)
 	GetNewsletterInvite(ctx *gin.Context)
